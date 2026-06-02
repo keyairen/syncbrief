@@ -15,6 +15,7 @@ app.get('/health', (_req, res) => {
   });
 });
 
+app.use('/api/meetings', meetingsRouter);
 app.use('/meetings', meetingsRouter);
 
 app.listen(env.port, () => {
