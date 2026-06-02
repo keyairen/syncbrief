@@ -73,17 +73,47 @@ function sendUploadError(res: Response, error: unknown) {
 }
 
 router.get('/', async (_req, res) => {
-  const { data, error } = await supabase
-    .from('meetings')
-    .select('*')
-    .order('created_at', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from('meetings')
+      .select('id, title, summary, created_at, processing_status')
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    res.status(500).json({ error: error.message });
-    return;
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    res.json({ meetings: data });
+  } catch (error) {
+    console.error('Failed to list meetings:', error);
+    res.status(500).json({ error: 'Failed to list meetings.' });
   }
+});
 
-  res.json({ meetings: data });
+router.get('/:id', async (req, res) => {
+  try {
+    const { data: meeting, error } = await supabase
+      .from('meetings')
+      .select('*')
+      .eq('id', req.params.id)
+      .maybeSingle();
+
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    if (!meeting) {
+      res.status(404).json({ error: 'Meeting not found.' });
+      return;
+    }
+
+    res.json({ meeting });
+  } catch (error) {
+    console.error('Failed to get meeting:', error);
+    res.status(500).json({ error: 'Failed to get meeting.' });
+  }
 });
 
 router.post('/upload', (req, res) => {
