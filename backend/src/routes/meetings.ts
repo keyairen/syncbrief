@@ -91,6 +91,35 @@ router.get('/', async (_req, res) => {
   }
 });
 
+router.get('/search', async (req, res) => {
+  try {
+    const rawQuery = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+    const query = rawQuery.replace(/[%,]/g, ' ').trim();
+
+    if (!query) {
+      res.status(400).json({ error: 'Search query is required.' });
+      return;
+    }
+
+    const pattern = `%${query}%`;
+    const { data, error } = await supabase
+      .from('meetings')
+      .select('id, title, summary, created_at, processing_status')
+      .or(`title.ilike.${pattern},summary.ilike.${pattern},transcript.ilike.${pattern}`)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    res.json({ meetings: data });
+  } catch (error) {
+    console.error('Failed to search meetings:', error);
+    res.status(500).json({ error: 'Failed to search meetings.' });
+  }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const { data: meeting, error } = await supabase

@@ -151,33 +151,44 @@ function PageHeader({
 
 function DashboardPage() {
   const [meetings, setMeetings] = useState<MeetingSummary[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const activeSearch = searchQuery.trim();
 
   useEffect(() => {
     let isMounted = true;
+    const timeout = window.setTimeout(() => {
+      const path = activeSearch
+        ? `/api/meetings/search?q=${encodeURIComponent(activeSearch)}`
+        : '/api/meetings';
 
-    getJson<{ meetings: MeetingSummary[] }>('/api/meetings')
-      .then((data) => {
-        if (isMounted) {
-          setMeetings(data.meetings);
-        }
-      })
-      .catch((requestError: Error) => {
-        if (isMounted) {
-          setError(requestError.message);
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      });
+      setIsLoading(true);
+      setError(null);
+
+      getJson<{ meetings: MeetingSummary[] }>(path)
+        .then((data) => {
+          if (isMounted) {
+            setMeetings(data.meetings);
+          }
+        })
+        .catch((requestError: Error) => {
+          if (isMounted) {
+            setError(requestError.message);
+          }
+        })
+        .finally(() => {
+          if (isMounted) {
+            setIsLoading(false);
+          }
+        });
+    }, activeSearch ? 250 : 0);
 
     return () => {
       isMounted = false;
+      window.clearTimeout(timeout);
     };
-  }, []);
+  }, [activeSearch]);
 
   return (
     <>
@@ -194,6 +205,18 @@ function DashboardPage() {
         }
       />
 
+      <div className="mb-5 rounded-lg border border-zinc-200 bg-white p-3 shadow-sm">
+        <label htmlFor="meeting-search" className="sr-only">Search meetings</label>
+        <input
+          id="meeting-search"
+          type="search"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Search title, summary, or transcript..."
+          className="h-11 w-full rounded-md border border-zinc-200 bg-zinc-50 px-4 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-100"
+        />
+      </div>
+
       {isLoading && <MeetingListSkeleton />}
       {error && <ErrorBlock message={error} />}
 
@@ -202,16 +225,30 @@ function DashboardPage() {
           <div className="mx-auto grid size-12 place-items-center rounded-lg bg-teal-50 text-sm font-semibold text-teal-700">
             AI
           </div>
-          <h2 className="mt-5 text-lg font-semibold text-zinc-950">No meetings processed yet</h2>
+          <h2 className="mt-5 text-lg font-semibold text-zinc-950">
+            {activeSearch ? 'No matching meetings' : 'No meetings processed yet'}
+          </h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-600">
-            Upload a call recording and SyncBrief will generate the summary, action items, deadlines, and transcript.
+            {activeSearch
+              ? 'Try a different keyword from the meeting title, summary, or transcript.'
+              : 'Upload a call recording and SyncBrief will generate the summary, action items, deadlines, and transcript.'}
           </p>
-          <Link
-            to="/meetings/upload"
-            className="mt-6 inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white hover:bg-zinc-800"
-          >
-            Upload first meeting
-          </Link>
+          {activeSearch ? (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="mt-6 inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white hover:bg-zinc-800"
+            >
+              Clear search
+            </button>
+          ) : (
+            <Link
+              to="/meetings/upload"
+              className="mt-6 inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white hover:bg-zinc-800"
+            >
+              Upload first meeting
+            </Link>
+          )}
         </div>
       )}
 
