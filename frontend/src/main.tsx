@@ -51,6 +51,18 @@ function formatDate(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
+function formatShortDate(value: string | null | undefined) {
+  if (!value) {
+    return 'No date';
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(value));
+}
+
 function previewText(value: string | null | undefined) {
   if (!value?.trim()) {
     return 'No summary yet.';
@@ -72,30 +84,32 @@ async function getJson<T>(path: string): Promise<T> {
 
 function AppShell() {
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-950">
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
+    <div className="min-h-screen bg-[#f7f8f6] text-zinc-950">
+      <header className="sticky top-0 z-20 border-b border-zinc-200/80 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
           <Link to="/meetings" className="flex items-center gap-3">
-            <span className="grid size-9 place-items-center rounded-md bg-teal-600 text-sm font-semibold text-white">
+            <span className="grid size-9 place-items-center rounded-md bg-zinc-950 text-sm font-semibold text-white shadow-sm">
               SB
             </span>
             <span>
               <span className="block text-sm font-semibold leading-5">SyncBrief</span>
-              <span className="block text-xs text-zinc-500">Meeting intelligence</span>
+              <span className="block text-xs text-zinc-500">AI meeting briefs</span>
             </span>
           </Link>
-          <nav className="flex items-center gap-2 text-sm font-medium">
+          <nav className="flex items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 text-sm font-medium shadow-sm">
             <NavLink
               to="/meetings"
               className={({ isActive }) =>
-                `rounded-md px-3 py-2 ${isActive ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-600 hover:bg-zinc-100'}`
+                `rounded-md px-3 py-1.5 transition ${isActive ? 'bg-white text-zinc-950 shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`
               }
             >
               Dashboard
             </NavLink>
             <NavLink
               to="/meetings/upload"
-              className="rounded-md bg-zinc-950 px-3 py-2 text-white hover:bg-zinc-800"
+              className={({ isActive }) =>
+                `rounded-md px-3 py-1.5 transition ${isActive ? 'bg-zinc-950 text-white shadow-sm' : 'bg-teal-600 text-white hover:bg-teal-700'}`
+              }
             >
               Upload
             </NavLink>
@@ -103,7 +117,7 @@ function AppShell() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-5 py-8">
+      <main className="mx-auto max-w-6xl px-5 py-8 sm:py-10">
         <Routes>
           <Route path="/" element={<Navigate to="/meetings" replace />} />
           <Route path="/meetings" element={<DashboardPage />} />
@@ -127,7 +141,7 @@ function PageHeader({
   return (
     <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">{title}</h1>
+        <h1 className="text-2xl font-semibold text-zinc-950">{title}</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">{description}</p>
       </div>
       {action}
@@ -173,25 +187,30 @@ function DashboardPage() {
         action={
           <Link
             to="/meetings/upload"
-            className="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
+            className="inline-flex h-10 items-center rounded-md bg-teal-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-teal-700"
           >
             Upload meeting
           </Link>
         }
       />
 
-      {isLoading && <LoadingBlock label="Loading meetings" />}
+      {isLoading && <MeetingListSkeleton />}
       {error && <ErrorBlock message={error} />}
 
       {!isLoading && !error && meetings.length === 0 && (
-        <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-6 py-12 text-center">
-          <h2 className="text-base font-semibold text-zinc-950">No meetings yet</h2>
-          <p className="mt-2 text-sm text-zinc-600">Upload an audio file to create the first SyncBrief.</p>
+        <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-6 py-14 text-center shadow-sm">
+          <div className="mx-auto grid size-12 place-items-center rounded-lg bg-teal-50 text-sm font-semibold text-teal-700">
+            AI
+          </div>
+          <h2 className="mt-5 text-lg font-semibold text-zinc-950">No meetings processed yet</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-600">
+            Upload a call recording and SyncBrief will generate the summary, action items, deadlines, and transcript.
+          </p>
           <Link
             to="/meetings/upload"
-            className="mt-5 inline-flex rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+            className="mt-6 inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white hover:bg-zinc-800"
           >
-            Upload audio
+            Upload first meeting
           </Link>
         </div>
       )}
@@ -201,19 +220,22 @@ function DashboardPage() {
           <Link
             key={meeting.id}
             to={`/meetings/${meeting.id}`}
-            className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm transition hover:border-teal-300 hover:shadow-md"
+            className="group rounded-lg border border-zinc-200 bg-white p-5 shadow-sm transition hover:border-teal-300 hover:shadow-md"
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
-                <h2 className="truncate text-base font-semibold text-zinc-950">
-                  {meeting.title || 'Untitled meeting'}
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-zinc-600">{previewText(meeting.summary)}</p>
+                <div className="flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-teal-500" />
+                  <h2 className="truncate text-base font-semibold text-zinc-950 group-hover:text-teal-700">
+                    {meeting.title || 'Untitled meeting'}
+                  </h2>
+                </div>
+                <p className="mt-2 line-clamp-2 text-sm leading-6 text-zinc-600">{previewText(meeting.summary)}</p>
               </div>
               <div className="shrink-0 text-left sm:text-right">
-                <p className="text-sm text-zinc-500">{formatDate(meeting.created_at)}</p>
+                <p className="text-sm font-medium text-zinc-700">{formatShortDate(meeting.created_at)}</p>
                 {meeting.processing_status && (
-                  <span className="mt-2 inline-flex rounded-full border border-zinc-200 px-2.5 py-1 text-xs font-medium capitalize text-zinc-600">
+                  <span className="mt-2 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium capitalize text-emerald-700">
                     {meeting.processing_status}
                   </span>
                 )}
@@ -273,23 +295,30 @@ function UploadMeetingPage() {
       />
 
       <form onSubmit={handleSubmit} className="max-w-2xl rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
+        <div className="mb-6 rounded-lg border border-teal-100 bg-teal-50/70 px-4 py-3">
+          <p className="text-sm font-medium text-teal-950">Processing includes transcript, summary, action items, and deadlines.</p>
+          <p className="mt-1 text-sm leading-6 text-teal-800">Most short recordings finish in a few moments.</p>
+        </div>
+
         <label className="block">
           <span className="text-sm font-medium text-zinc-800">Audio file</span>
-          <input
-            type="file"
-            accept="audio/*"
-            disabled={isUploading}
-            onChange={(event) => {
-              setFile(event.target.files?.[0] ?? null);
-              setError(null);
-            }}
-            className="mt-3 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-zinc-700 hover:file:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
-          />
+          <span className="mt-3 block rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-5 transition hover:border-teal-300 hover:bg-white">
+            <input
+              type="file"
+              accept="audio/*"
+              disabled={isUploading}
+              onChange={(event) => {
+                setFile(event.target.files?.[0] ?? null);
+                setError(null);
+              }}
+              className="block w-full text-sm text-zinc-700 file:mr-4 file:rounded-md file:border-0 file:bg-zinc-950 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+            />
+          </span>
         </label>
 
         {file && (
-          <div className="mt-4 rounded-md bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
-            <span className="font-medium">{file.name}</span>
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
+            <span className="min-w-0 truncate font-medium">{file.name}</span>
             <span className="ml-2 text-zinc-500">{Math.max(file.size / 1024 / 1024, 0.01).toFixed(2)} MB</span>
           </div>
         )}
@@ -300,11 +329,16 @@ function UploadMeetingPage() {
           <button
             type="submit"
             disabled={isUploading}
-            className="inline-flex min-w-32 items-center justify-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-zinc-400"
+            className="inline-flex h-10 min-w-32 items-center justify-center rounded-md bg-teal-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-zinc-400"
           >
             {isUploading ? 'Processing...' : 'Upload'}
           </button>
-          {isUploading && <span className="text-sm text-zinc-600">Transcribing and extracting meeting notes.</span>}
+          {isUploading && (
+            <span className="inline-flex items-center gap-2 text-sm text-zinc-600">
+              <span className="size-2 animate-pulse rounded-full bg-teal-500" />
+              Transcribing and extracting meeting notes.
+            </span>
+          )}
         </div>
       </form>
     </>
@@ -352,7 +386,7 @@ function MeetingDetailPage() {
   const deadlines = useMemo(() => meeting?.deadlines ?? [], [meeting]);
 
   if (isLoading) {
-    return <LoadingBlock label="Loading meeting" />;
+    return <MeetingDetailSkeleton />;
   }
 
   if (error) {
@@ -378,11 +412,11 @@ function MeetingDetailPage() {
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="space-y-5">
           <Panel title="Summary">
-            <p className="whitespace-pre-wrap text-sm leading-7 text-zinc-700">{meeting.summary || 'No summary available.'}</p>
+            <p className="whitespace-pre-wrap text-[15px] leading-7 text-zinc-700">{meeting.summary || 'No summary available.'}</p>
           </Panel>
 
           <Panel title="Full Transcript">
-            <p className="max-h-[520px] overflow-auto whitespace-pre-wrap text-sm leading-7 text-zinc-700">
+            <p className="max-h-[560px] overflow-auto rounded-md border border-zinc-200 bg-zinc-50 p-4 font-mono text-[13px] leading-7 text-zinc-700">
               {meeting.transcript || 'No transcript available.'}
             </p>
           </Panel>
@@ -395,12 +429,15 @@ function MeetingDetailPage() {
             ) : (
               <div className="space-y-3">
                 {actionItems.map((item, index) => (
-                  <div key={`${item.task}-${index}`} className="rounded-md border border-zinc-200 p-3">
+                  <div key={`${item.task}-${index}`} className="rounded-md border border-zinc-200 bg-zinc-50/70 p-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <span className="text-xs font-semibold uppercase text-zinc-500">Action {index + 1}</span>
+                      {item.priority && <PriorityBadge priority={item.priority} />}
+                    </div>
                     <p className="text-sm font-medium leading-6 text-zinc-950">{item.task}</p>
                     <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-600">
-                      {item.owner && <Badge>{item.owner}</Badge>}
-                      {item.deadline && <Badge>{item.deadline}</Badge>}
-                      {item.priority && <Badge>{item.priority}</Badge>}
+                      {item.owner && <Badge label="Owner">{item.owner}</Badge>}
+                      {item.deadline && <Badge label="Due">{item.deadline}</Badge>}
                     </div>
                   </div>
                 ))}
@@ -414,7 +451,7 @@ function MeetingDetailPage() {
             ) : (
               <div className="space-y-3">
                 {deadlines.map((deadline, index) => (
-                  <div key={`${deadline.date}-${index}`} className="rounded-md border border-zinc-200 p-3">
+                  <div key={`${deadline.date}-${index}`} className="border-l-2 border-teal-500 bg-zinc-50 py-2 pl-3">
                     <p className="text-sm font-semibold text-zinc-950">{deadline.date}</p>
                     <p className="mt-1 text-sm leading-6 text-zinc-600">{deadline.description}</p>
                   </div>
@@ -431,20 +468,65 @@ function MeetingDetailPage() {
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
-      <h2 className="mb-4 text-sm font-semibold uppercase text-zinc-500">{title}</h2>
+      <h2 className="mb-4 text-xs font-semibold uppercase text-zinc-500">{title}</h2>
       {children}
     </section>
   );
 }
 
-function Badge({ children }: { children: React.ReactNode }) {
-  return <span className="rounded-full bg-zinc-100 px-2.5 py-1 font-medium text-zinc-700">{children}</span>;
+function Badge({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 font-medium text-zinc-700">
+      <span className="text-zinc-400">{label}:</span> {children}
+    </span>
+  );
 }
 
-function LoadingBlock({ label }: { label: string }) {
+function PriorityBadge({ priority }: { priority: string }) {
+  const value = priority.toLowerCase();
+  const tone = value.includes('high')
+    ? 'border-red-200 bg-red-50 text-red-700'
+    : value.includes('medium')
+      ? 'border-amber-200 bg-amber-50 text-amber-700'
+      : 'border-zinc-200 bg-white text-zinc-600';
+
+  return <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold capitalize ${tone}`}>{priority}</span>;
+}
+
+function MeetingListSkeleton() {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-6 text-sm text-zinc-600 shadow-sm">
-      {label}...
+    <div className="grid gap-3">
+      {[0, 1, 2].map((item) => (
+        <div key={item} className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="flex justify-between gap-4">
+            <div className="flex-1">
+              <div className="h-4 w-48 animate-pulse rounded bg-zinc-200" />
+              <div className="mt-4 h-3 w-full animate-pulse rounded bg-zinc-100" />
+              <div className="mt-2 h-3 w-2/3 animate-pulse rounded bg-zinc-100" />
+            </div>
+            <div className="h-4 w-24 animate-pulse rounded bg-zinc-100" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MeetingDetailSkeleton() {
+  return (
+    <div className="space-y-5">
+      <div className="h-7 w-72 animate-pulse rounded bg-zinc-200" />
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-5">
+          <div className="h-40 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+            <div className="h-3 w-20 animate-pulse rounded bg-zinc-200" />
+            <div className="mt-6 h-3 w-full animate-pulse rounded bg-zinc-100" />
+            <div className="mt-3 h-3 w-5/6 animate-pulse rounded bg-zinc-100" />
+          </div>
+          <div className="h-72 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm" />
+        </div>
+        <div className="h-64 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm" />
+      </div>
     </div>
   );
 }
